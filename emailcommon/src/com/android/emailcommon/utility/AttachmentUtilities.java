@@ -109,7 +109,7 @@ public class AttachmentUtilities {
         "mst", "pif", "scr", "sct", "shb", "sys", "vb", "vbe",
         "vbs", "vxd", "wsc", "wsf", "wsh",
         // File types of common compression/container formats (again, to avoid malware)
-        "zip", "gz", "z", "tar", "tgz", "bz2",
+        /* "zip", "gz", "z", "tar", "tgz", "bz2", */
     };
     /**
      * Filename extensions of attachments that can be installed.
