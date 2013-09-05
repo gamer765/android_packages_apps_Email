@@ -375,6 +375,7 @@ class UIControllerTwoPane extends UIControllerBase implements ThreePaneLayout.Ca
             mThreePane.showRightPane();
         } else if (mListContext.isSearch() && UiUtilities.showTwoPaneSearchResults(mActivity)) {
             mThreePane.showRightPane();
+            mThreePane.uncollapsePane();
         } else {
             mThreePane.showLeftPane();
         }
@@ -525,6 +526,19 @@ class UIControllerTwoPane extends UIControllerBase implements ThreePaneLayout.Ca
     @Override
     public boolean onBackPressed(boolean isSystemBackKey) {
         if (!mThreePane.isPaneCollapsible()) {
+            if (mActionBarController.onBackPressed(isSystemBackKey)) {
+                return true;
+            }
+
+            if (mThreePane.showLeftPane()) {
+                return true;
+            }
+        } else {
+            // If it's not the system back key, always attempt to uncollapse the left pane first.
+            if (!isSystemBackKey && mThreePane.uncollapsePane()) {
+                return true;
+            }
+
             if (mActionBarController.onBackPressed(isSystemBackKey)) {
                 return true;
             }

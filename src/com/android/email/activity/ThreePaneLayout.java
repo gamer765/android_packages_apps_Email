@@ -178,52 +178,30 @@ public class ThreePaneLayout extends LinearLayout {
 
         mLeftPane = findViewById(R.id.left_pane);
         mMiddlePane = findViewById(R.id.middle_pane);
+        mRightPane = findViewById(R.id.right_pane);
+
         mMessageCommandButtons = (MessageCommandButtonView)
                 findViewById(R.id.message_command_buttons);
         mInMessageCommandButtons = (MessageCommandButtonView)
                 findViewById(R.id.inmessage_command_buttons);
 
-        mRightPane = findViewById(R.id.right_pane);
-        mConvViewExpandList = getContext().getResources().getBoolean(R.bool.expand_middle_view);
-        View[][] stateRightVisible = new View[][] {
-                {
-                    mMiddlePane, mMessageCommandButtons, mRightPane
-                }, // Visible
-                {
-                    mLeftPane
-                }, // Invisible
-                {
-                    mInMessageCommandButtons
-                }, // Gone;
-        };
-        View[][] stateRightVisibleHideConvList = new View[][] {
-                {
-                        mRightPane, mInMessageCommandButtons
-                }, // Visible
-                {
-                        mMiddlePane, mMessageCommandButtons, mLeftPane
-                }, // Invisible
-                {}, // Gone;
-        };
         mShowHideViews = new View[][][] {
                 // STATE_LEFT_VISIBLE
                 {
-                        {
-                           mLeftPane, mMiddlePane
-                        }, // Visible
-                        {
-                            mRightPane
-                        }, // Invisible
-                        {
-                            mMessageCommandButtons, mInMessageCommandButtons
-                        }, // Gone
+                        {mLeftPane, mMiddlePane}, // Visible
+                        {mRightPane}, // Invisible
+                        {mMessageCommandButtons, mInMessageCommandButtons}, // Gone
                 },
                 // STATE_RIGHT_VISIBLE
-                mConvViewExpandList ? stateRightVisible : stateRightVisibleHideConvList,
+                {
+                        {mRightPane, mInMessageCommandButtons}, // Visible
+                        {mMiddlePane, mMessageCommandButtons, mLeftPane}, // Invisible
+                        {}, // Gone
+                },
                 // STATE_MIDDLE_EXPANDED
                 {
-                        {}, // Visible
-                        {}, // Invisible
+                        {mMiddlePane, mMessageCommandButtons, mRightPane, mInMessageCommandButtons, }, // Visible
+                        {mLeftPane}, // Invisible
                         {}, // Gone
                 },
         };
@@ -231,8 +209,7 @@ public class ThreePaneLayout extends LinearLayout {
         mInitialPaneState = STATE_LEFT_VISIBLE;
 
         final Resources resources = getResources();
-        mMailboxListWidth = getResources().getDimensionPixelSize(
-                R.dimen.mailbox_list_width);
+        mMailboxListWidth = getResources().getDimensionPixelSize(R.dimen.mailbox_list_width);
         mMessageListWidth = getResources().getDimensionPixelSize(R.dimen.message_list_width);
     }
 
@@ -258,7 +235,7 @@ public class ThreePaneLayout extends LinearLayout {
      * Return whether or not the left pane should be collapsible.
      */
     public boolean isPaneCollapsible() {
-        return false;
+        return true;
     }
 
     public MessageCommandButtonView getMessageCommandButtons() {
@@ -301,6 +278,25 @@ public class ThreePaneLayout extends LinearLayout {
     }
 
     /**
+     * Handles the back event.
+     *
+     */
+    public boolean uncollapsePane() {
+        if (!isPaneCollapsible()) {
+            return false;
+        }
+
+        if (mPaneState == STATE_RIGHT_VISIBLE) {
+            return changePaneState(STATE_MIDDLE_EXPANDED, true);
+        } else if (mInitialPaneState == STATE_RIGHT_VISIBLE) {
+            mInitialPaneState = STATE_MIDDLE_EXPANDED;
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Show the left most pane.  (i.e. mailbox list)
      */
     public boolean showLeftPane() {
@@ -325,13 +321,6 @@ public class ThreePaneLayout extends LinearLayout {
      */
     public boolean showRightPane() {
         return changePaneState(STATE_RIGHT_VISIBLE, true);
-    }
-
-    private int getMailboxListWidth() {
-        if (!shouldShowMailboxList()) {
-            return 0;
-        }
-        return mMailboxListWidth;
     }
 
     private boolean changePaneState(int newState, boolean animate) {
@@ -362,29 +351,41 @@ public class ThreePaneLayout extends LinearLayout {
 
         final int expectedMailboxLeft;
         final int expectedMessageListWidth;
+        final int expectedMessageWidth;
 
         final String animatorLabel; // for debug purpose
 
-        setViewWidth(mLeftPane, getMailboxListWidth());
-        setViewWidth(mRightPane, totalWidth - getMessageListWidth());
+        setViewWidth(mLeftPane, mMailboxListWidth);
 
         switch (mPaneState) {
             case STATE_LEFT_VISIBLE:
-                // mailbox + message list
+                // message list + message view -> mailbox + message list
                 animatorLabel = "moving to [mailbox list + message list]";
                 expectedMailboxLeft = 0;
-                expectedMessageListWidth = totalWidth - getMailboxListWidth();
+                expectedMessageListWidth = totalWidth - mMailboxListWidth;
+                expectedMessageWidth = totalWidth - mMailboxListWidth;
+                break;
+           case STATE_MIDDLE_EXPANDED:
+                // mailbox + message list -> message list + message view
+                animatorLabel = "moving to [message list + message view]";
+                expectedMailboxLeft = -mMailboxListWidth;
+                expectedMessageListWidth = mMessageListWidth;
+                expectedMessageWidth = totalWidth - mMessageListWidth;
                 break;
             case STATE_RIGHT_VISIBLE:
-                // message list + message view
-                animatorLabel = "moving to [message list + message view]";
-                expectedMailboxLeft = -getMailboxListWidth();
-                expectedMessageListWidth = getMessageListWidth();
+                // message view only
+                animatorLabel = "moving to [message view]";
+                expectedMailboxLeft = -(mMailboxListWidth + mMessageListWidth);
+                expectedMessageListWidth = mMessageListWidth;
+                expectedMessageWidth = totalWidth;
                 break;
             default:
                 throw new IllegalStateException();
         }
+
         setViewWidth(mMiddlePane, expectedMessageListWidth);
+        setViewWidth(mRightPane, expectedMessageWidth);
+
         final View[][] showHideViews = mShowHideViews[mPaneState];
         final AnimatorListener listener = new AnimatorListener(animatorLabel,
                 showHideViews[INDEX_VISIBLE],
@@ -397,16 +398,11 @@ public class ThreePaneLayout extends LinearLayout {
                 PropertyValuesHolder.ofInt(PROP_MAILBOX_LIST_LEFT,
                         getCurrentMailboxLeft(), expectedMailboxLeft),
                 PropertyValuesHolder.ofInt(PROP_MESSAGE_LIST_WIDTH,
-                        getCurrentMessageListWidth(), expectedMessageListWidth)
+                        getCurrentMessageListWidth(), expectedMessageListWidth),
+                PropertyValuesHolder.ofInt(PROP_MESSAGE_WIDTH,
+                        getCurrentMessageWidth(), expectedMessageWidth)
                 );
         return true;
-    }
-
-    private int getMessageListWidth() {
-        if (!mConvViewExpandList && mPaneState == STATE_RIGHT_VISIBLE) {
-            return 0;
-        }
-        return mMessageListWidth;
     }
     /**
      * @return The ID of the view for the left pane fragment.  (i.e. mailbox list)
@@ -436,6 +432,7 @@ public class ThreePaneLayout extends LinearLayout {
 
     private static final String PROP_MAILBOX_LIST_LEFT = "mailboxListLeftAnim";
     private static final String PROP_MESSAGE_LIST_WIDTH = "messageListWidthAnim";
+    private static final String PROP_MESSAGE_WIDTH = "messageWidthAnim";
 
     public void setMailboxListLeftAnim(int value) {
         ((ViewGroup.MarginLayoutParams) mLeftPane.getLayoutParams()).leftMargin = value;
@@ -446,12 +443,20 @@ public class ThreePaneLayout extends LinearLayout {
         setViewWidth(mMiddlePane, value);
     }
 
+    public void setMessageWidthAnim(int value) {
+        setViewWidth(mRightPane, value);
+    }
+
     private int getCurrentMailboxLeft() {
         return ((ViewGroup.MarginLayoutParams) mLeftPane.getLayoutParams()).leftMargin;
     }
 
     private int getCurrentMessageListWidth() {
         return mMiddlePane.getLayoutParams().width;
+    }
+
+    private int getCurrentMessageWidth() {
+        return mRightPane.getLayoutParams().width;
     }
 
     /**
