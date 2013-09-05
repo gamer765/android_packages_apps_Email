@@ -357,12 +357,12 @@ public class ThreePaneLayout extends LinearLayout implements View.OnClickListene
 
         final int expectedMailboxLeft;
         final int expectedMessageListWidth;
+        final int expectedMessageViewWidth;
 
         final String animatorLabel; // for debug purpose
 
         if (!isPaneCollapsible()) {
             setViewWidth(mLeftPane, mMailboxListWidth);
-            setViewWidth(mRightPane, totalWidth - mMessageListWidth);
 
             switch (mPaneState) {
                 case STATE_LEFT_VISIBLE:
@@ -370,12 +370,14 @@ public class ThreePaneLayout extends LinearLayout implements View.OnClickListene
                     animatorLabel = "moving to [mailbox list + message list]";
                     expectedMailboxLeft = 0;
                     expectedMessageListWidth = totalWidth - mMailboxListWidth;
+                    expectedMessageViewWidth = totalWidth - mMailboxListWidth;
                     break;
                 case STATE_RIGHT_VISIBLE:
                     // message list + message view
                     animatorLabel = "moving to [message list + message view]";
                     expectedMailboxLeft = -mMailboxListWidth;
                     expectedMessageListWidth = mMessageListWidth;
+                    expectedMessageViewWidth = totalWidth - mMessageListWidth;
                     break;
                 default:
                     throw new IllegalStateException();
@@ -383,7 +385,6 @@ public class ThreePaneLayout extends LinearLayout implements View.OnClickListene
 
         } else {
             setViewWidth(mLeftPane, mMailboxListWidth);
-            setViewWidth(mRightPane, totalWidth);
 
             switch (mPaneState) {
                 case STATE_LEFT_VISIBLE:
@@ -391,18 +392,21 @@ public class ThreePaneLayout extends LinearLayout implements View.OnClickListene
                     animatorLabel = "moving to [mailbox list + message list]";
                     expectedMailboxLeft = 0;
                     expectedMessageListWidth = totalWidth - mMailboxListWidth;
+                    expectedMessageViewWidth = totalWidth - mMailboxListWidth;
                     break;
                 case STATE_MIDDLE_EXPANDED:
                     // mailbox + message list -> message list + message view
                     animatorLabel = "moving to [message list + message view]";
                     expectedMailboxLeft = -mMailboxListWidth;
                     expectedMessageListWidth = mMessageListWidth;
+                    expectedMessageViewWidth = totalWidth - mMessageListWidth;
                     break;
                 case STATE_RIGHT_VISIBLE:
                     // message view only
                     animatorLabel = "moving to [message view]";
                     expectedMailboxLeft = -(mMailboxListWidth + mMessageListWidth);
                     expectedMessageListWidth = mMessageListWidth;
+                    expectedMessageViewWidth = totalWidth;
                     break;
                 default:
                     throw new IllegalStateException();
@@ -416,12 +420,14 @@ public class ThreePaneLayout extends LinearLayout implements View.OnClickListene
                 showHideViews[INDEX_GONE],
                 previousVisiblePanes);
 
-        // Animation properties -- mailbox list left and message list width, at the same time.
+        // Animation properties -- mailbox list left, message list width, and message width at the same time.
         startLayoutAnimation(animate ? ANIMATION_DURATION : 0, listener,
                 PropertyValuesHolder.ofInt(PROP_MAILBOX_LIST_LEFT,
                         getCurrentMailboxLeft(), expectedMailboxLeft),
                 PropertyValuesHolder.ofInt(PROP_MESSAGE_LIST_WIDTH,
-                        getCurrentMessageListWidth(), expectedMessageListWidth)
+                        getCurrentMessageListWidth(), expectedMessageListWidth),
+                PropertyValuesHolder.ofInt(PROP_MESSAGE_WIDTH,
+                        getCurrentMessageViewWidth(), expectedMessageViewWidth)
                 );
         return true;
     }
@@ -466,6 +472,7 @@ public class ThreePaneLayout extends LinearLayout implements View.OnClickListene
 
     private static final String PROP_MAILBOX_LIST_LEFT = "mailboxListLeftAnim";
     private static final String PROP_MESSAGE_LIST_WIDTH = "messageListWidthAnim";
+    private static final String PROP_MESSAGE_WIDTH = "messageViewWidthAnim";
 
     public void setMailboxListLeftAnim(int value) {
         ((ViewGroup.MarginLayoutParams) mLeftPane.getLayoutParams()).leftMargin = value;
@@ -476,12 +483,20 @@ public class ThreePaneLayout extends LinearLayout implements View.OnClickListene
         setViewWidth(mMiddlePane, value);
     }
 
+    public void setMessageViewWidthAnim(int value) {
+        setViewWidth(mRightPane, value);
+    }
+
     private int getCurrentMailboxLeft() {
         return ((ViewGroup.MarginLayoutParams) mLeftPane.getLayoutParams()).leftMargin;
     }
 
     private int getCurrentMessageListWidth() {
         return mMiddlePane.getLayoutParams().width;
+    }
+
+    private int getCurrentMessageViewWidth() {
+        return mRightPane.getLayoutParams().width;
     }
 
     /**
