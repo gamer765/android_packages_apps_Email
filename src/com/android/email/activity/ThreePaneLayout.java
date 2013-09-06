@@ -200,9 +200,9 @@ public class ThreePaneLayout extends LinearLayout {
                 },
                 // STATE_MIDDLE_EXPANDED
                 {
-                        {mMiddlePane, mMessageCommandButtons, mRightPane, mInMessageCommandButtons, }, // Visible
+                        {mMiddlePane, mMessageCommandButtons, mRightPane}, // Visible
                         {mLeftPane}, // Invisible
-                        {}, // Gone
+                        {mInMessageCommandButtons}, // Gone
                 },
         };
 
